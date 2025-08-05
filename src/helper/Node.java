@@ -2,54 +2,73 @@ package helper;
 
 import java.util.*;
 
+/**
+ * Represents a Node in an undirected graph.
+ * Each Node has a unique identifier, an integer label, and a list of adjacent nodes.
+ * Neighbor relationships (undirected edges) are maintained by the Graph class.
+ */
 public class Node {
-    private final String id;
-    private String label;
-    private Set<Node> neighbors = new HashSet<>();
+    /** Immutable unique identifier for this node. */
+    private final int id;
 
-    // Track which edges connect this node to neighbors
-    private final Set<Edge> edges = new HashSet<>();
+    /** Mutable label for marking, coloring, or categorization. */
+    private int label;
 
-    public Node(String id, String label) {
-        if (id == null) {
-            throw new IllegalArgumentException("Node ID cannot be null");
-        }
+    /** Adjacency list of directly connected neighbor nodes. */
+    private final List<Node> neighbors = new ArrayList<>();
+
+    /**
+     * Constructs a new Node with the given unique identifier.
+     *
+     * @param id the unique ID of this node
+     */
+    public Node(int id) {
         this.id = id;
-        this.label = label;
     }
 
-    public String getId() {
+    /**
+     * Returns this node’s unique identifier.
+     *
+     * @return the node ID
+     */
+    public int getId() {
         return id;
     }
 
-    public String getLabel() {
+    /**
+     * Returns the current label of this node.
+     *
+     * @return the node’s label
+     */
+    public int getLabel() {
         return label;
     }
 
-    public void setLabel(String label) {
+    /**
+     * Updates the label of this node.
+     *
+     * @param label an integer value used for marking or categorization
+     */
+    public void setLabel(int label) {
         this.label = label;
     }
 
-    public Set<Node> getNeighbors() {
-        return Collections.unmodifiableSet(neighbors);
-    }
-
-    public void addNeighbor(Node neighbor) {
-        if (neighbor == null) {
-            throw new IllegalArgumentException("Neighbor cannot be null");
-        }
+    /**
+     * Adds a neighbor to this node’s adjacency list.
+     * Package-private to prevent external misuse; Graph ensures undirected symmetry.
+     *
+     * @param neighbor the node to connect as a neighbor
+     */
+    void addNeighbor(Node neighbor) {
         neighbors.add(neighbor);
     }
 
-    public void addEdge(Edge edge) {
-        if (edge == null) {
-            throw new IllegalArgumentException("Cannot add a null edge");
-        }
-        edges.add(edge);
-    }
-
-    @Override
-    public String toString() {
-        return "Node{id='" + id + "', label='" + label + "'}";
+    /**
+     * Returns an unmodifiable view of this node’s neighbors.
+     *
+     * @return an unmodifiable list of adjacent nodes
+     */
+    public List<Node> getNeighbors() {
+        return Collections.unmodifiableList(neighbors);
     }
 }

@@ -2,124 +2,160 @@ package patterns;
 
 import helper.Graph;
 import helper.Node;
-import helper.Edge;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
-public class PatternExtractor {
+/**
+ * Builds ego-network Patterns for each node in a graph up to a given radius.
+ * For each center node, performs a BFS to depth ≤ radius, captures node labels,
+ * induced adjacency, layering by distance, and depths, then deduplicates
+ * identical Patterns by canonical form—incrementing frequency for duplicates.
+ */
+public final class PatternExtractor {
+    // Prevent instantiation
+    private PatternExtractor() { }
 
     /**
-     * Extracts all unique ego-network patterns (of given radius) from the graph,
-     * returning a map from each Pattern to its occurrence count.
+     * Extracts ego-network patterns for all nodes in the graph at the specified radius,
+     * deduplicates identical patterns, and aggregates their frequencies.
+     *
+     * @param  graph   the input graph; must not be null
+     * @param  radius  maximum hop-distance (must be ≥ 1)
+     * @return         list of unique Patterns, each with its aggregated frequency
+     * @throws IllegalArgumentException if graph is null or radius < 1
      */
-    public static Map<Pattern, Integer> extractPatterns(Graph graph, int radius) {
-        Map<Pattern, Integer> counts = new HashMap<>();
+    public static List<Pattern> extractPatterns(Graph graph, int radius) {
+        Objects.requireNonNull(graph, "graph must not be null");
+        if (radius < 1) {
+            throw new IllegalArgumentException("radius must be ≥ 1");
+        }
+
+        // Preserve insertion order of first-seen patterns
+        Map<Pattern, Pattern> unique = new LinkedHashMap<>();
         for (Node center : graph.getAllNodes()) {
-            // 1) BFS to collect distances up to the specified radius
-            Map<Node, Integer> dist = bfsDistances(graph, center, radius);
-
-            // 2) Collect candidate nodes at distance 1..radius from center
-            Set<Node> egoCandidates = new HashSet<>();
-            for (Map.Entry<Node, Integer> entry : dist.entrySet()) {
-                int d = entry.getValue();
-                if (d >= 1 && d <= radius) {
-                    egoCandidates.add(entry.getKey());
-                }
+            Pattern p = buildPattern(center, radius);
+            Pattern existing = unique.get(p);
+            if (existing == null) {
+                unique.put(p, p);
+            } else {
+                existing.updateFrequency();
             }
-
-            // 3) Build induced subgraph set: {center} ∪ egoCandidates
-            Set<Node> inducedSet = new HashSet<>(egoCandidates);
-            inducedSet.add(center);
-
-            // 4) Collect edges within induced set and their label pairs
-            Set<Edge> edgeObjects = new HashSet<>();
-            Set<String> edgeLabels = new TreeSet<>();
-            for (Edge edge : graph.getAllEdges()) {
-                Node a = edge.getNodeA();
-                Node b = edge.getNodeB();
-                if (inducedSet.contains(a) && inducedSet.contains(b)) {
-                    edgeObjects.add(edge);
-                    edgeLabels.add(Graph.sortedLabelPair(a.getLabel(), b.getLabel()));
-                }
-            }
-
-            // 5) Derive neighbor labels from collected edge label pairs
-            LinkedHashSet<String> neighborLabels = new LinkedHashSet<>();
-            for (String pair : edgeLabels) {
-                String[] parts = pair.split("\\|");
-                neighborLabels.add(parts[0]);
-                neighborLabels.add(parts[1]);
-            }
-
-            // 6) Identify direct neighbors of the center (distance = 1)
-            List<Node> directNeighbors = new ArrayList<>();
-            for (Map.Entry<Node, Integer> entry : dist.entrySet()) {
-                if (entry.getValue() == 1) {
-                    directNeighbors.add(entry.getKey());
-                }
-            }
-            // Collect direct neighbor labels (duplicates allowed)
-            List<String> directLabelsList = gatherLabelsWithDuplicates(directNeighbors);
-
-            // Prepare neighborNodes list for Pattern (all induced nodes except center)
-            List<Node> neighborNodes = new ArrayList<>(inducedSet);
-            neighborNodes.remove(center);
-
-            // Create the Pattern for this center and count its occurrences
-            Pattern pattern = new Pattern(
-                    center.getLabel(),
-                    new ArrayList<>(neighborLabels),
-                    edgeLabels,
-                    directLabelsList,
-                    radius
-            );
-            // Set transient node references for potential later use
-            pattern.setCenterNode(center);
-            pattern.setNeighborNodes(neighborNodes);
-            pattern.setDirectNeighborNodes(directNeighbors);
-            pattern.setNeighborEdges(edgeObjects);
-
-            // *** Store the BFS distance map in the pattern,
-            //     so we can visualize the exact same layering.
-            pattern.setDistanceMap(dist);
-
-            counts.merge(pattern, 1, Integer::sum);
         }
-
-        return counts;
+        return new ArrayList<>(unique.values());
     }
 
     /**
-     * Collects node labels from a list of nodes, preserving duplicates.
+     * Builds a single Pattern for the given center node with initial frequency = 1.
+     *
+     * @param  center  the center node; must not be null
+     * @param  radius  maximum hop-distance (≥ 1)
+     * @return         a new Pattern capturing the center’s ego-network
      */
-    private static List<String> gatherLabelsWithDuplicates(List<Node> nodes) {
-        List<String> labels = new ArrayList<>();
-        for (Node node : nodes) {
-            labels.add(node.getLabel());
+    private static Pattern buildPattern(Node center, int radius) {
+        // 1) Compute BFS depths from center
+        Map<Node,Integer> nodeDepths = computeDepths(center, radius);
+
+        // 2) Map node IDs to labels and depths
+        Map<Integer,Integer> labels = new LinkedHashMap<>();
+        Map<Integer,Integer> depths = new LinkedHashMap<>();
+        for (Map.Entry<Node,Integer> e : nodeDepths.entrySet()) {
+            Node n = e.getKey();
+            labels.put(n.getId(), n.getLabel());
+            depths.put(n.getId(), e.getValue());
         }
-        return labels;
+
+        // 3) Build per-distance layers
+        List<Set<Integer>> layers = computeLayers(depths, radius);
+
+        // 4) Build induced adjacency among nodes within radius
+        Set<Integer> subIds = labels.keySet();
+        Map<Integer,List<Integer>> adjacency = new LinkedHashMap<>();
+        for (Node n : nodeDepths.keySet()) {
+            List<Integer> nbrs = n.getNeighbors().stream()
+                    .map(Node::getId)
+                    .filter(subIds::contains)
+                    .collect(Collectors.toList());
+            adjacency.put(n.getId(), nbrs);
+        }
+
+        // 5) Center node degree = number of neighbors at distance 1
+        int centerNodeDegree = layers.get(0).size();
+
+        // 6) Construct Pattern with frequency = 1
+        return new Pattern(
+                center.getId(),
+                center.getLabel(),
+                radius,
+                labels,
+                adjacency,
+                layers,
+                depths,
+                1,
+                centerNodeDegree
+        );
     }
 
     /**
-     * BFS from the start node up to a given radius. Returns a map of each reachable node to its distance from the start.
+     * Performs a breadth-first search from the center up to the given radius.
+     *
+     * @param  center  start node for BFS; must not be null
+     * @param  radius  maximum hop-distance (≥ 1)
+     * @return         map of each reached Node to its distance from center
      */
-    private static Map<Node, Integer> bfsDistances(Graph graph, Node start, int radius) {
-        Map<Node, Integer> dist = new HashMap<>();
-        Queue<Node> queue = new LinkedList<>();
-        dist.put(start, 0);
-        queue.add(start);
+    private static Map<Node,Integer> computeDepths(Node center, int radius) {
+        Map<Node,Integer> depthMap = new LinkedHashMap<>();
+        Queue<Node> queue = new ArrayDeque<>();
+
+        depthMap.put(center, 0);
+        queue.add(center);
 
         while (!queue.isEmpty()) {
             Node current = queue.poll();
-            int d = dist.get(current);
-            if (d >= radius) continue;
-            for (Node neighbor : graph.getNeighbors(current)) {
-                if (!dist.containsKey(neighbor)) {
-                    dist.put(neighbor, d + 1);
-                    queue.add(neighbor);
+            int dist = depthMap.get(current);
+            if (dist >= radius) continue;
+
+            for (Node nbr : current.getNeighbors()) {
+                if (!depthMap.containsKey(nbr)) {
+                    depthMap.put(nbr, dist + 1);
+                    queue.add(nbr);
                 }
             }
         }
-        return dist;
+        return depthMap;
+    }
+
+    /**
+     * Constructs layers of node IDs by exact distance from the center.
+     *
+     * @param  depths  map of nodeID → distance (must contain 0…radius)
+     * @param  radius  maximum distance
+     * @return         list of size = radius, where index k-1 holds nodes at distance k
+     */
+    private static List<Set<Integer>> computeLayers(Map<Integer,Integer> depths, int radius) {
+        List<Set<Integer>> layers = new ArrayList<>();
+        for (int k = 1; k <= radius; k++) {
+            layers.add(new LinkedHashSet<>());
+        }
+        for (Map.Entry<Integer,Integer> e : depths.entrySet()) {
+            int id = e.getKey(), d = e.getValue();
+            if (d >= 1 && d <= radius) {
+                layers.get(d - 1).add(id);
+            }
+        }
+        return Collections.unmodifiableList(layers);
+    }
+
+    /**
+     * Prints each extracted Pattern in a human-readable format.
+     *
+     * @param  graph   the input graph
+     * @param  radius  maximum hop-distance
+     */
+    public static void printPatterns(Graph graph, int radius) {
+        extractPatterns(graph, radius).forEach(p -> {
+            System.out.println(p);
+            System.out.println();
+        });
     }
 }

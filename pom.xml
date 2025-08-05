@@ -1,38 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
-
-    <!-- ────────── Project Coordinates ────────── -->
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.example</groupId>   <!-- Change as desired -->
+    <groupId>com.example</groupId>
     <artifactId>wfc</artifactId>
     <version>1.0-SNAPSHOT</version>
 
-    <!-- ────────── Java Version & Encoding ────────── -->
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
 
-    <!-- ────────── Dependencies ────────── -->
+    <repositories>
+        <repository>
+            <id>central</id>
+            <url>https://repo1.maven.org/maven2/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
     <dependencies>
-        <!-- JGraphT -->
         <dependency>
             <groupId>org.jgrapht</groupId>
             <artifactId>jgrapht-core</artifactId>
             <version>1.5.1</version>
         </dependency>
-
-        <!-- Apache Commons Math -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-math3</artifactId>
             <version>3.6.1</version>
         </dependency>
-
-        <!-- JUnit (test only) -->
+        <dependency>
+            <groupId>org.mapdb</groupId>
+            <artifactId>mapdb</artifactId>
+            <version>3.0.8</version>
+        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -41,43 +51,18 @@
         </dependency>
     </dependencies>
 
-    <!-- ────────── Build Configuration ────────── -->
     <build>
-
-        <!-- (A) Custom Source & Test Directories -->
         <sourceDirectory>${project.basedir}/src</sourceDirectory>
-
-        <!-- (B) Resource Directories -->
-        <resources>
-            <!-- 1) Take non-Java files from /src -->
-            <resource>
-                <directory>${project.basedir}/src</directory>
-                <excludes>
-                    <exclude>**/*.java</exclude>
-                </excludes>
-            </resource>
-            <!-- 2) Additional /res folder -->
-            <resource>
-                <directory>${project.basedir}/res</directory>
-                <excludes>
-                    <exclude>**/*.java</exclude>
-                </excludes>
-            </resource>
-        </resources>
-
         <plugins>
-            <!-- ─── Compiler Plugin ─── -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.1</version>
                 <configuration>
-                    <source>8</source>
-                    <target>8</target>
+                    <source>10</source>
+                    <target>10</target><compilerArgs>--enable-preview</compilerArgs>
                 </configuration>
             </plugin>
-
-            <!-- ─── Assembly Plugin (Fat JAR) ─── -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
@@ -85,7 +70,6 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <!-- If your main method is in package wfc, class wfc, use wfc.wfc -->
                             <mainClass>wfc.wfc</mainClass>
                         </manifest>
                     </archive>
@@ -103,7 +87,6 @@
                     </execution>
                 </executions>
             </plugin>
-
         </plugins>
     </build>
 </project>

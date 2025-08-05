@@ -2,77 +2,67 @@ package helper;
 
 import java.util.*;
 
+/**
+ * Represents an undirected graph with lazy node creation, edge management, and labeling.
+ *
+ * This class maintains a mapping from integer IDs to Node instances and provides
+ * methods to add edges, assign labels, and retrieve nodes.
+ */
 public class Graph {
-    private final Map<String, Node> nodes = new HashMap<>();
-    private final List<Edge> edges = new ArrayList<>();
+    /** Maps each node ID to its corresponding Node instance. */
+    private final Map<Integer, Node> nodes = new HashMap<>();
 
     /**
-     * Adds a new node to the graph.
-     * @throws IllegalArgumentException if a node with the given ID already exists.
+     * Retrieves or creates a Node with the specified ID.
+     *
+     * @param  id    unique identifier of the node
+     * @return       the existing or newly created Node
      */
-    public Node addNode(String id, String label) {
-        if (nodes.containsKey(id)) {
-            throw new IllegalArgumentException("Node ID already exists: " + id);
-        }
-        Node node = new Node(id, label);
-        nodes.put(id, node);
-        return node;
+    public Node getOrCreateNode(int id) {
+        return nodes.computeIfAbsent(id, Node::new);
     }
 
-    public Node getNodeById(String id) {
+    /**
+     * Adds an undirected edge between two nodes identified by their IDs.
+     * If either node does not exist, it is created.
+     *
+     * @param  uId    ID of the first node endpoint
+     * @param  vId    ID of the second node endpoint
+     */
+    public void addEdge(int uId, int vId) {
+        Node u = getOrCreateNode(uId);
+        Node v = getOrCreateNode(vId);
+        u.addNeighbor(v);
+        v.addNeighbor(u);
+    }
+
+    /**
+     * Assigns or updates the integer label of the node with the given ID.
+     * If the node does not exist yet, it is created.
+     *
+     * @param  id      unique identifier of the node
+     * @param  label   integer label used for marking or categorization
+     */
+    public void setLabel(int id, int label) {
+        getOrCreateNode(id).setLabel(label);
+    }
+
+    /**
+     * Returns the Node corresponding to the specified ID, or null if none exists.
+     *
+     * @param  id    unique identifier to look up
+     * @return       the Node with that ID, or null if not found
+     */
+    public Node getNode(int id) {
         return nodes.get(id);
     }
 
+    /**
+     * Provides a read-only collection of all nodes currently in the graph.
+     *
+     * @return       an unmodifiable view of all registered Nodes
+     */
     public Collection<Node> getAllNodes() {
         return Collections.unmodifiableCollection(nodes.values());
-    }
-
-    public List<Edge> getAllEdges() {
-        return Collections.unmodifiableList(edges);
-    }
-
-    /**
-     * Adds an edge between the nodes with the given IDs.
-     * If an edge between the two nodes already exists, returns the existing edge.
-     * @throws IllegalArgumentException if either node ID is not present in the graph.
-     */
-    public Edge addEdge(String nodeIdA, String nodeIdB) {
-        Node nodeA = getNodeById(nodeIdA);
-        Node nodeB = getNodeById(nodeIdB);
-        if (nodeA == null || nodeB == null) {
-            throw new IllegalArgumentException(
-                    "Both nodes must exist in the graph: " + nodeIdA + ", " + nodeIdB
-            );
-        }
-        // Avoid duplicate edges (treat undirected edges as identical regardless of order)
-        for (Edge e : edges) {
-            if ((e.getNodeA().equals(nodeA) && e.getNodeB().equals(nodeB)) ||
-                    (e.getNodeA().equals(nodeB) && e.getNodeB().equals(nodeA))) {
-                return e;  // Edge already exists, return it
-            }
-        }
-        Edge edge = new Edge(nodeA, nodeB);
-        edges.add(edge);
-        nodeA.addNeighbor(nodeB);
-        nodeB.addNeighbor(nodeA);
-        nodeA.addEdge(edge);
-        nodeB.addEdge(edge);
-        return edge;
-    }
-
-    public Set<Node> getNeighbors(Node node) {
-        if (node == null || !nodes.containsKey(node.getId())) {
-            throw new IllegalArgumentException("Node is not in this graph.");
-        }
-        return node.getNeighbors();
-    }
-
-    /**
-     * Utility: returns a canonical label pair string (labels sorted lexicographically).
-     */
-    public static String sortedLabelPair(String label1, String label2) {
-        return (label1.compareTo(label2) <= 0)
-                ? label1 + "|" + label2
-                : label2 + "|" + label1;
     }
 }
