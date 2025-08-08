@@ -1,4 +1,4 @@
-﻿# Wave Function Collapse for Graph Augmentation
+﻿# Wave Function Collapse for Synthetic Graph Generation
 
 ## Work in Progress: This project is under active development and features are subject to change. The README may not reflect the final implementation.
 
@@ -106,4 +106,5 @@ Edit constants in `wfc.wfc`:
 
 * Java 11 or later
 * No external dependencies
+
 
