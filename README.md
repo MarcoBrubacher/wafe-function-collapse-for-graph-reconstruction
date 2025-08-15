@@ -35,10 +35,10 @@ Synthetic graph generation via a Wave Function Collapse–inspired pipeline. Giv
         * Expansion allowance decays linearly from full cap at 100% progress down to zero at `upperCap × targetSize`.
         * Guarantees every cell is collapsed; leaves only minimal open stubs if size constraints apply.
 
-4. **Export & Quality Metrics**
+4. **Export**
 
     * Write out final edge and label files for each generated graph.
-    * Evaluate structural fidelity (degree-distribution MMD, clustering MMD, etc.) via `WFCQualityMetrics`.
+
 
 ## Repository Structure
 
@@ -65,8 +65,6 @@ wfc/
   ConstraintPropagator.java
   wfc.java
 
-quality/
-  WFCQualityMetrics.java
 ```
 
 ## Configuration
@@ -106,5 +104,6 @@ Edit constants in `wfc.wfc`:
 
 * Java 11 or later
 * No external dependencies
+
 
 
