@@ -86,10 +86,6 @@ Edit constants in `wfc.wfc`:
 
 2. **Run the generator**
 
-   ```sh
-   java -cp <your-jar>.jar wfc.wfc
-   ```
-
     * Auto-detects all `<index>` in `res/trainingGraphs/`
     * Resumes from last processed index (stored in `res/last_iter.txt`)
     * Outputs synthetic graphs to `res/generatedGraphs/`
@@ -98,12 +94,12 @@ Edit constants in `wfc.wfc`:
 
     * Edge files: `res/generatedGraphs/graphedges<index>`
     * Label files: `res/generatedGraphs/graphlabels<index>`
-    * Console logs include compatibility diagnostics and MMD metrics.
 
 ## Requirements
 
 * Java 11 or later
 * No external dependencies
+
 
 
 
